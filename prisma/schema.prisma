@@ -1,0 +1,88 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model ImageJob {
+  jobId              String    @id @default(uuid()) @map("job_id")
+  batchId            String?   @map("batch_id")
+  brandId            String    @map("brand_id")
+  listingId          String    @map("listing_id")
+
+  status             String    @default("pending")
+  currentStage       Int       @default(1) @map("current_stage")
+  pausedReason       String?   @map("paused_reason")
+
+  originalFilename   String    @map("original_filename")
+  originalSizeBytes  Int       @map("original_size_bytes")
+  originalMimeType   String    @map("original_mime_type")
+  originalS3Key      String    @map("original_s3_key")
+  imageHash          String?   @map("image_hash")
+  originalWidth      Int?      @map("original_width")
+  originalHeight     Int?      @map("original_height")
+
+  validation         Json?
+  moderation         Json?
+  quality            Json?
+
+  approvedImageKey   String?   @map("approved_image_key")
+  rejectionReason    String?   @map("rejection_reason")
+  brandRejectionNote String?   @map("brand_rejection_note")
+
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+  completedAt        DateTime? @map("completed_at")
+
+  batch              BatchJob?        @relation(fields: [batchId], references: [batchId])
+  processedImages    ProcessedImage[]
+
+  @@index([brandId], map: "idx_image_jobs_brand")
+  @@index([listingId], map: "idx_image_jobs_listing")
+  @@index([status], map: "idx_image_jobs_status")
+  @@index([imageHash], map: "idx_image_jobs_hash")
+  @@map("image_jobs")
+}
+
+model ProcessedImage {
+  processedImageId    String    @id @default(uuid()) @map("processed_image_id")
+  jobId               String    @map("job_id")
+  shotType            String    @map("shot_type")
+  source              String
+  s3Key               String    @map("s3_key")
+  publicUrl           String?   @map("public_url")
+  promptUsed          String?   @map("prompt_used")
+  enhancementSkipped  Boolean   @default(false) @map("enhancement_skipped")
+
+  brandDecision       String?   @map("brand_decision")
+  brandDecisionAt     DateTime? @map("brand_decision_at")
+  brandRejectionReason String?  @map("brand_rejection_reason")
+
+  createdAt           DateTime  @default(now()) @map("created_at")
+
+  job                 ImageJob  @relation(fields: [jobId], references: [jobId])
+
+  @@index([jobId], map: "idx_processed_images_job")
+  @@index([brandDecision], map: "idx_processed_images_decision")
+  @@map("processed_images")
+}
+
+model BatchJob {
+  batchId      String    @id @default(uuid()) @map("batch_id")
+  brandId      String    @map("brand_id")
+  listingId    String    @map("listing_id")
+  totalImages  Int       @map("total_images")
+  completed    Int       @default(0)
+  failed       Int       @default(0)
+  status       String    @default("processing")
+
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  jobs         ImageJob[]
+
+  @@map("batch_jobs")
+}
