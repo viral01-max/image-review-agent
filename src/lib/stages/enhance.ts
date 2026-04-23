@@ -20,7 +20,7 @@ export async function enhanceImage(
   const operations: string[] = [];
   const formData = new FormData();
 
-  formData.append("imageFile", new Blob([imageBuffer], { type: "image/jpeg" }), "product.jpg");
+  formData.append("imageFile", new Blob([new Uint8Array(imageBuffer)], { type: "image/jpeg" }), "product.jpg");
   formData.append("outputSize", "1000x1000");
   formData.append("padding", "0.08");
 
