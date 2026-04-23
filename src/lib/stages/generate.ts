@@ -65,7 +65,8 @@ export async function generateProductShots(imageBuffer: Buffer): Promise<Generat
         style: "natural",
         n: 1,
       });
-      return { shotType, url: response.data[0].url!, promptUsed: prompt };
+      const url = response.data?.[0]?.url ?? "";
+      return { shotType, url, promptUsed: prompt };
     })
   );
 

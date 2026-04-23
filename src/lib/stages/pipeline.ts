@@ -77,7 +77,7 @@ export async function processImageJob(jobId: string): Promise<void> {
       data: { status: "moderating", currentStage: 2 },
     });
 
-    const imageBuffer = await downloadImage(BUCKETS.staging, validation.sanitisedS3Key!);
+    const imageBuffer = await downloadImage(BUCKETS.staging, validation.sanitisedS3Key ?? job.originalS3Key);
     const moderation = await moderateImage(imageBuffer);
 
     if (moderation.status === "rejected") {
