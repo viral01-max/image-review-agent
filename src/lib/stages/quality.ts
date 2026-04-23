@@ -1,11 +1,3 @@
-/**
- * Stage 3: Quality Assessment — GPT-4o Vision
- * Determines if the image is a usable product shot and routes to:
- *   - brand_review (already good)
- *   - enhance (PhotoRoom fix-up)
- *   - generate (full AI shot generation)
- */
-
 import OpenAI from "openai";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -25,7 +17,7 @@ Analyse this image and return a JSON object with the following fields:
   "notes": string
 }
 
-Return ONLY the JSON object. No commentary.`;
+Return ONLY the JSON object. No commentary. No markdown. No backticks.`;
 
 export interface QualityResult {
   route: "brand_review" | "enhance" | "generate";
@@ -47,44 +39,44 @@ export async function assessQuality(imageBuffer: Buffer): Promise<QualityResult>
 
   const response = await openai.chat.completions.create({
     model: "gpt-4o",
-    messages: [
-      {
-        role: "user",
-        content: [
-          {
-            type: "image_url",
-            image_url: { url: `data:image/jpeg;base64,${base64}`, detail: "high" },
-          },
-          { type: "text", text: QUALITY_PROMPT },
-        ],
-      },
-    ],
+    messages: [{
+      role: "user",
+      content: [
+        { type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64}`, detail: "high" } },
+        { type: "text", text: QUALITY_PROMPT },
+      ],
+    }],
     max_tokens: 300,
     response_format: { type: "json_object" },
   });
 
-  const report = JSON.parse(response.choices[0].message.content ?? "{}");
-
-  let route: QualityResult["route"];
-  if (!report.is_product_shot || !report.product_visible) {
-    route = "generate";
-  } else if (report.needs_background_removal || report.needs_brightness_fix || report.needs_sharpness_fix) {
-    route = "enhance";
-  } else {
-    route = "brand_review";
+  let report: Record<string, unknown> = {};
+  try {
+    const raw = response.choices[0].message.content ?? "{}";
+    const cleaned = raw.replace(/```json|```/g, "").trim();
+    report = JSON.parse(cleaned);
+  } catch {
+    report = {};
   }
+
+  const route: QualityResult["route"] =
+    !report.is_product_shot || !report.product_visible
+      ? "generate"
+      : report.needs_background_removal || report.needs_brightness_fix || report.needs_sharpness_fix
+      ? "enhance"
+      : "brand_review";
 
   return {
     route,
-    isProductShot: report.is_product_shot ?? false,
-    productVisible: report.product_visible ?? false,
-    backgroundType: report.background_type ?? "unknown",
-    needsBackgroundRemoval: report.needs_background_removal ?? false,
-    needsBrightnessFix: report.needs_brightness_fix ?? false,
-    needsSharpnessFix: report.needs_sharpness_fix ?? false,
-    shotType: report.shot_type ?? "unknown",
-    gpt4oConfidence: report.confidence ?? 0,
-    notes: report.notes ?? "",
+    isProductShot: Boolean(report.is_product_shot),
+    productVisible: Boolean(report.product_visible),
+    backgroundType: String(report.background_type ?? "unknown"),
+    needsBackgroundRemoval: Boolean(report.needs_background_removal),
+    needsBrightnessFix: Boolean(report.needs_brightness_fix),
+    needsSharpnessFix: Boolean(report.needs_sharpness_fix),
+    shotType: String(report.shot_type ?? "unknown"),
+    gpt4oConfidence: Number(report.confidence ?? 0),
+    notes: String(report.notes ?? ""),
     checkedAt: now,
   };
 }
