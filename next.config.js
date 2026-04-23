@@ -6,9 +6,7 @@ const nextConfig = {
       { protocol: "https", hostname: "oaidalleapiprodscus.blob.core.windows.net" },
     ],
   },
-  experimental: {
-    serverComponentsExternalPackages: ["sharp"],
-  },
+  serverExternalPackages: ["sharp", "bullmq", "ioredis", "@aws-sdk/client-rekognition", "@aws-sdk/client-s3"],
 };
 
 module.exports = nextConfig;
